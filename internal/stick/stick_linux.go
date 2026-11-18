@@ -29,6 +29,7 @@ type Target struct {
 	Size      int64
 	Removable bool
 	block     dbus.ObjectPath
+	drive     dbus.ObjectPath
 }
 
 type Writer struct{ conn *dbus.Conn }
@@ -62,7 +63,7 @@ func (w *Writer) Inspect(device string) (*Target, error) {
 		}
 	}
 	drive := w.conn.Object(udisks, dp)
-	t := &Target{Device: "/dev/" + name, block: block}
+	t := &Target{Device: "/dev/" + name, block: block, drive: dp}
 	if v, err := drive.GetProperty(driveIface + ".Model"); err == nil {
 		t.Model, _ = v.Value().(string)
 	}
@@ -86,6 +87,9 @@ func (w *Writer) Write(t *Target, src io.Reader, size int64, progress func(done 
 	}
 	if size > t.Size {
 		return fmt.Errorf("the image is %d bytes and %s holds %d", size, t.Device, t.Size)
+	}
+	if err := w.unmount(t); err != nil {
+		return err
 	}
 	var fd dbus.UnixFD
 	obj := w.conn.Object(udisks, t.block)
@@ -137,6 +141,34 @@ func (w *Writer) Write(t *Target, src io.Reader, size int64, progress func(done 
 	}
 	if string(got.Sum(nil)) != string(want.Sum(nil)) {
 		return fmt.Errorf("%s does not read back what was written", t.Device)
+	}
+	return nil
+}
+
+func (w *Writer) unmount(t *Target) error {
+	var objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant
+	root := w.conn.Object(udisks, "/org/freedesktop/UDisks2")
+	if err := root.Call("org.freedesktop.DBus.ObjectManager.GetManagedObjects", 0).Store(&objects); err != nil {
+		return fmt.Errorf("list block devices: %w", err)
+	}
+	for path, ifaces := range objects {
+		blk, ok := ifaces[blockIface]
+		if !ok {
+			continue
+		}
+		if d, ok := blk["Drive"].Value().(dbus.ObjectPath); !ok || d != t.drive {
+			continue
+		}
+		fs, ok := ifaces[udisks+".Filesystem"]
+		if !ok {
+			continue
+		}
+		if mounts, ok := fs["MountPoints"].Value().([][]byte); !ok || len(mounts) == 0 {
+			continue
+		}
+		if err := w.conn.Object(udisks, path).Call(udisks+".Filesystem.Unmount", 0, map[string]dbus.Variant{}).Err; err != nil {
+			return fmt.Errorf("unmount %s: %w", path, err)
+		}
 	}
 	return nil
 }
