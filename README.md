@@ -27,6 +27,8 @@ sinty-flash show <id>                       print what a profile does to a devic
 sinty-flash detect                          find connected devices the catalog knows
 sinty-flash stick [-y] <id> <image> <disk>  write the installer stick for a device
 sinty-flash flash [-y] <id> <image|release> flash a device in fastboot mode
+sinty-flash edl-package <id> <release> <firmware> <out>
+                                            build the EDL flash package of a board
 sinty-flash version                         print the version
 ```
 
@@ -47,6 +49,19 @@ images from the kernel, initramfs and device tree in the signed image with
 to the slot the profile names, writes the data image, makes that slot active
 and reboots. The AVB footers are signed with a key made for each flash, which
 an unlocked bootloader accepts.
+
+`edl-package` is for boards flashed over Qualcomm EDL, such as the Arduino UNO
+Q. From a signed release and the board's own flash package (`<firmware>`, the
+directory with its `gpt_main0.bin` and `gpt_backup0.bin`) it builds a package
+that installs Sinty the way the installer does on the board: the partitions the
+profile replaces become one `atom-data` partition, and every other entry of the
+board's table, slot attributes included, stays exactly as the board package
+ships it. The ESP and the data partition are sparse images that carry only the
+data they hold, and the data partition grows to the whole disk on the first
+boot. `rawprogram0.xml` and `patch0.xml` fit the board's programmer, so the
+package flashes with any EDL tool that reads them. Building it needs
+`mkfs.fat`, `mcopy`, `mkfs.f2fs`, `sload.f2fs`, `fsck.f2fs`, `dump.erofs`, and
+an `atom-install` named by `SINTY_ATOM_INSTALL` or found on `PATH`.
 
 Images may be raw or `.xz` compressed. `SINTY_FLASH_CATALOG` points the tool at
 another catalog, either a URL or a local checkout of sinty-devices, for testing
