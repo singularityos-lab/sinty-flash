@@ -26,7 +26,7 @@ sinty-flash devices                         list the devices the catalog knows
 sinty-flash show <id>                       print what a profile does to a device
 sinty-flash detect                          find connected devices the catalog knows
 sinty-flash stick [-y] <id> <image> <disk>  write the installer stick for a device
-sinty-flash flash [-y] <id> <image>         flash a device in fastboot mode
+sinty-flash flash [-y] <id> <image|release> flash a device in fastboot mode
 sinty-flash version                         print the version
 ```
 
@@ -38,6 +38,15 @@ drive that is not removable, and reads the drive back to check every byte.
 profile lists from the matching part of a Sinty image, splitting large
 partitions into sparse pieces that fit the device's download limit, and leaves
 every other partition untouched.
+
+For a device whose profile has a `boot` section, such as the Pixel 7 Pro,
+`<image>` is a release directory instead: the signed unified kernel image
+`kernelcache.efi` and the data image `userdata.img`. The tool builds the boot
+images from the kernel, initramfs and device tree in the signed image with
+[sinty-bootimg](https://github.com/singularityos-lab/sinty-bootimg), writes them
+to the slot the profile names, writes the data image, makes that slot active
+and reboots. The AVB footers are signed with a key made for each flash, which
+an unlocked bootloader accepts.
 
 Images may be raw or `.xz` compressed. `SINTY_FLASH_CATALOG` points the tool at
 another catalog, either a URL or a local checkout of sinty-devices, for testing

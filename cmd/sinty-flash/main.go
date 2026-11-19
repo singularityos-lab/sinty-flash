@@ -27,7 +27,7 @@ usage:
   sinty-flash show <id>                      print a device profile
   sinty-flash detect                         find connected devices the catalog knows
   sinty-flash stick [-y] <id> <image> <disk> write the installer stick for a device
-  sinty-flash flash [-y] <id> <image>        flash a device in fastboot mode
+  sinty-flash flash [-y] <id> <image|release> flash a device in fastboot mode
   sinty-flash version                        print the version
 
 The catalog is read from SINTY_FLASH_CATALOG, a URL or a local checkout of

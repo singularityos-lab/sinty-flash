@@ -1,7 +1,11 @@
 github.com/godbus/dbus/v5 v5.2.4 h1:F2gUCy++NMIxGmo9J+z5le/+ZC8W1OgeR51P4i9ZB/U=
 github.com/godbus/dbus/v5 v5.2.4/go.mod h1:3AAv2+hPq5rdnr5txxxRwiGjPXamgoIHgz9FPBfOp3c=
-github.com/singularityos-lab/sinty-devices v0.0.0-20261118083005-48a276ba602f h1:URglIyMjAQfKPCvd6HRcf8Bs/ocjGoAK8CgLCDJP8I4=
-github.com/singularityos-lab/sinty-devices v0.0.0-20261118083005-48a276ba602f/go.mod h1:WL0axOEFZAxu4drI9UxoRjbz/1mxlBKyN+5yeaqVE18=
+github.com/pierrec/lz4/v4 v4.1.22 h1:cKFw6uJDK+/gfw5BcDL0JL5aBsAFdsIT18eRtLj7VIU=
+github.com/pierrec/lz4/v4 v4.1.22/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
+github.com/singularityos-lab/sinty-bootimg v0.0.0-20261119141939-47f565715dbc h1:RuxoahpH0HopKAMLwMC4T3DfTQQ6xQy8ihFPxoEoZYg=
+github.com/singularityos-lab/sinty-bootimg v0.0.0-20261119141939-47f565715dbc/go.mod h1:2uSUxm2zlCZFNHovAK8KnJjEIJ1WTXFyim/Jihqi0J8=
+github.com/singularityos-lab/sinty-devices v0.0.0-20261119141009-baf03d16d4c2 h1:QVVa3GMAWhOJRKttRhx6sasp1hSU3oualZTZBUA0qLc=
+github.com/singularityos-lab/sinty-devices v0.0.0-20261119141009-baf03d16d4c2/go.mod h1:k7ijrSFFdACS+jCmy80EHQRo+kFINrfelDdV85UGVzA=
 github.com/ulikunitz/xz v0.5.17 h1:flR0y/x1hgM8EGV1AW3Xll6T413G0glV8UfBwR617V4=
 github.com/ulikunitz/xz v0.5.17/go.mod h1:H9Rt/W6/Qj27PGauhQc6nfCDy7vHpzsOThBSaYDoEhw=
 golang.org/x/sys v0.27.0 h1:wBqf8DvsY9Y/2P8gAfPDEYNuS30J4lPHJxXSb/nJZ+s=

@@ -30,6 +30,9 @@ func cmdFlash(args []string) error {
 	if p.Install.Method != "fastboot" {
 		return fmt.Errorf("%s installs with %s: use sinty-flash stick", id, p.Install.Method)
 	}
+	if p.Boot != nil {
+		return flashAndroid(p, imagePath, yes)
+	}
 	dev, err := findFastboot(p)
 	if err != nil {
 		return err
