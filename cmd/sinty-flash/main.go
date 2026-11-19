@@ -28,6 +28,8 @@ usage:
   sinty-flash detect                         find connected devices the catalog knows
   sinty-flash stick [-y] <id> <image> <disk> write the installer stick for a device
   sinty-flash flash [-y] <id> <image|release> flash a device in fastboot mode
+  sinty-flash data-image <id> <release> <out>
+                                             build the data image of a phone
   sinty-flash edl-package <id> <release> <firmware> <out>
                                              build the EDL flash package of a board
   sinty-flash version                        print the version
@@ -53,6 +55,8 @@ func run(args []string) int {
 		err = cmdStick(args[1:])
 	case "flash":
 		err = cmdFlash(args[1:])
+	case "data-image":
+		err = cmdDataImage(args[1:])
 	case "edl-package":
 		err = cmdEDLPackage(args[1:])
 	case "version":

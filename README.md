@@ -27,6 +27,7 @@ sinty-flash show <id>                       print what a profile does to a devic
 sinty-flash detect                          find connected devices the catalog knows
 sinty-flash stick [-y] <id> <image> <disk>  write the installer stick for a device
 sinty-flash flash [-y] <id> <image|release> flash a device in fastboot mode
+sinty-flash data-image <id> <release> <out> build the data image of a phone
 sinty-flash edl-package <id> <release> <firmware> <out>
                                             build the EDL flash package of a board
 sinty-flash version                         print the version
@@ -42,13 +43,21 @@ partitions into sparse pieces that fit the device's download limit, and leaves
 every other partition untouched.
 
 For a device whose profile has a `boot` section, such as the Pixel 7 Pro,
-`<image>` is a release directory instead: the signed unified kernel image
-`kernelcache.efi` and the data image `userdata.img`. The tool builds the boot
+`<image>` is a release directory instead: the signed release, with its unified
+kernel image `kernelcache.efi`. When the directory has no data image
+`userdata.img`, the tool builds one from the release in the user's cache, the
+way `data-image` does, and removes it after the flash. The tool builds the boot
 images from the kernel, initramfs and device tree in the signed image with
 [sinty-bootimg](https://github.com/singularityos-lab/sinty-bootimg), writes them
 to the slot the profile names, writes the data image, makes that slot active
 and reboots. The AVB footers are signed with a key made for each flash, which
 an unlocked bootloader accepts.
+
+`data-image` builds that data image ahead of time: the release laid out by
+`atom-install` in an f2fs image as small as its contents, which the phone grows
+to the whole partition on its first boot. Building it needs `mkfs.f2fs`,
+`sload.f2fs`, `fsck.f2fs`, `dump.erofs`, and an `atom-install` named by
+`SINTY_ATOM_INSTALL` or found on `PATH`.
 
 `edl-package` is for boards flashed over Qualcomm EDL, such as the Arduino UNO
 Q. From a signed release and the board's own flash package (`<firmware>`, the

@@ -64,15 +64,23 @@ func androidPlan(p *profile.Profile, dir string) ([]flashSource, func(), error) 
 			}
 			plan[i] = flashSource{name: part.Source + " image", r: bytes.NewReader(img), size: int64(len(img))}
 		case part.Source == "data":
-			path := filepath.Join(dir, releaseData)
-			if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-				path += ".xz"
+			path, built, err := releaseDataImage(dir)
+			if err != nil {
+				return nil, nil, err
 			}
 			f, done, err := randomAccess(path)
 			if err != nil {
+				if built != "" {
+					os.RemoveAll(built)
+				}
 				return nil, nil, fmt.Errorf("the release has no data image: %w", err)
 			}
-			cleanup = done
+			cleanup = func() {
+				done()
+				if built != "" {
+					os.RemoveAll(built)
+				}
+			}
 			fi, err := f.Stat()
 			if err != nil {
 				done()
@@ -142,4 +150,36 @@ func activeSlot(p *profile.Profile) string {
 		}
 	}
 	return ""
+}
+
+// releaseDataImage finds the data image of a release, or builds it from the
+// signed release itself when the directory carries none, in the user's cache
+// rather than a temporary directory that may live in memory. built is the
+// directory to remove once the image has been written.
+func releaseDataImage(dir string) (path, built string, err error) {
+	for _, name := range []string{releaseData, releaseData + ".xz"} {
+		path = filepath.Join(dir, name)
+		if _, err := os.Stat(path); err == nil {
+			return path, "", nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", "", err
+		}
+	}
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return "", "", err
+	}
+	if err := os.MkdirAll(filepath.Join(cache, "sinty-flash"), 0o755); err != nil {
+		return "", "", err
+	}
+	built, err = os.MkdirTemp(filepath.Join(cache, "sinty-flash"), "data-")
+	if err != nil {
+		return "", "", err
+	}
+	path = filepath.Join(built, releaseData)
+	if err := buildDataImage(dir, path); err != nil {
+		os.RemoveAll(built)
+		return "", "", err
+	}
+	return path, built, nil
 }

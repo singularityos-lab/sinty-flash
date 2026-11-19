@@ -48,16 +48,9 @@ func cmdEDLPackage(args []string) error {
 	if !hasEDL(p) {
 		return fmt.Errorf("%s has no EDL mode", id)
 	}
-	for _, t := range []string{"mkfs.fat", "mcopy", "mkfs.f2fs", "sload.f2fs", "fsck.f2fs", "dump.erofs"} {
-		if _, err := exec.LookPath(t); err != nil {
-			return fmt.Errorf("%s is needed to build the images", t)
-		}
-	}
-	installer := os.Getenv("SINTY_ATOM_INSTALL")
-	if installer == "" {
-		if installer, err = exec.LookPath("atom-install"); err != nil {
-			return fmt.Errorf("set SINTY_ATOM_INSTALL to an atom-install binary")
-		}
+	installer, err := imageTools("mkfs.fat", "mcopy")
+	if err != nil {
+		return err
 	}
 
 	primary, err := os.ReadFile(filepath.Join(firmware, officialMain))
@@ -94,19 +87,8 @@ func cmdEDLPackage(args []string) error {
 	}
 	defer os.RemoveAll(work)
 
-	sysroot := filepath.Join(work, "sysroot")
-	if err := os.MkdirAll(filepath.Join(sysroot, filepath.Dir(greetdConfig)), 0o755); err != nil {
-		return err
-	}
-	greetd, err := exec.Command("dump.erofs", "--cat", "--path=/"+greetdConfig, filepath.Join(release, "rootfs.erofs")).Output()
-	if err != nil || len(greetd) == 0 {
-		return fmt.Errorf("the release root has no %s: %v", greetdConfig, err)
-	}
-	if err := os.WriteFile(filepath.Join(sysroot, greetdConfig), greetd, 0o644); err != nil {
-		return err
-	}
 	stage := filepath.Join(work, "stage")
-	if err := runTool(installer, "--stage", stage, "--from", release, "--sysroot", sysroot); err != nil {
+	if err := stageRelease(installer, "--stage", stage, release, work); err != nil {
 		return err
 	}
 
@@ -198,15 +180,51 @@ func makeESP(img, dir string, size int64) error {
 	return runTool("mcopy", append(args, "::/")...)
 }
 
+// imageTools checks for the programs that build the images of an install and
+// finds atom-install, which stages them.
+func imageTools(extra ...string) (string, error) {
+	for _, t := range append([]string{"mkfs.f2fs", "sload.f2fs", "fsck.f2fs", "dump.erofs"}, extra...) {
+		if _, err := exec.LookPath(t); err != nil {
+			return "", fmt.Errorf("%s is needed to build the images", t)
+		}
+	}
+	if installer := os.Getenv("SINTY_ATOM_INSTALL"); installer != "" {
+		return installer, nil
+	}
+	installer, err := exec.LookPath("atom-install")
+	if err != nil {
+		return "", fmt.Errorf("set SINTY_ATOM_INSTALL to an atom-install binary")
+	}
+	return installer, nil
+}
+
+// stageRelease lays out an install of the release in dir with atom-install,
+// in the given mode, taking the login settings from the release's own root.
+func stageRelease(installer, mode, dir, release, work string) error {
+	sysroot := filepath.Join(work, "sysroot")
+	if err := os.MkdirAll(filepath.Join(sysroot, filepath.Dir(greetdConfig)), 0o755); err != nil {
+		return err
+	}
+	greetd, err := exec.Command("dump.erofs", "--cat", "--path=/"+greetdConfig, filepath.Join(release, "rootfs.erofs")).Output()
+	if err != nil || len(greetd) == 0 {
+		return fmt.Errorf("the release root has no %s: %v", greetdConfig, err)
+	}
+	if err := os.WriteFile(filepath.Join(sysroot, greetdConfig), greetd, 0o644); err != nil {
+		return err
+	}
+	return runTool(installer, mode, dir, "--from", release, "--sysroot", sysroot)
+}
+
 // makeData packs the staged data partition into an f2fs image as small as its
-// contents. The init grows it to the whole partition on the first boot.
+// contents, within limit when limit is set. The init grows it to the whole
+// partition on the first boot.
 func makeData(img, dir string, limit int64) error {
 	used, err := treeSize(dir)
 	if err != nil {
 		return err
 	}
 	mib := used>>20 + used>>20/dataSlackDivisor + dataHeadroomMiB
-	if mib<<20 > limit {
+	if limit > 0 && mib<<20 > limit {
 		return fmt.Errorf("the data partition holds %d MiB, the system needs %d MiB", limit>>20, mib)
 	}
 	if err := truncated(img, mib<<20); err != nil {
