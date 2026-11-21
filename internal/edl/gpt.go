@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"slices"
+	"strings"
 	"unicode/utf16"
 )
 
@@ -152,6 +153,51 @@ func (t *Table) Merge(names []string, typ [16]byte, name string) (Entry, error) 
 	copy(t.backupEntries(), raw)
 	t.seal()
 	return merged, nil
+}
+
+// The slot bits of the Qualcomm Android bootloader, in the upper half of the
+// attributes of a slot's boot partition.
+const (
+	qcomPriority   uint64 = 3 << 48
+	qcomActive     uint64 = 1 << 50
+	qcomRetries    uint64 = 7 << 51
+	qcomSuccessful uint64 = 1 << 54
+	qcomSlotBits   uint64 = 0xff << 48
+)
+
+// ActivateQcomSlot makes the named boot partition the slot the Qualcomm
+// bootloader starts, with every retry left and already booted successfully, so
+// the bootloader never counts its retries down. The other slot of the pair
+// loses its slot bits. Every other attribute bit stays as shipped.
+func (t *Table) ActivateQcomSlot(name string) error {
+	slot, err := t.Find(name)
+	if err != nil {
+		return err
+	}
+	t.setSlotBits(slot, qcomPriority|qcomActive|qcomRetries|qcomSuccessful)
+	if other, ok := otherSlot(name); ok {
+		if e, err := t.Find(other); err == nil {
+			t.setSlotBits(e, 0)
+		}
+	}
+	copy(t.backupEntries(), t.mainEntries())
+	t.seal()
+	return nil
+}
+
+func (t *Table) setSlotBits(e Entry, bits uint64) {
+	raw := t.mainEntries()[(e.Num-1)*entrySize : e.Num*entrySize]
+	binary.LittleEndian.PutUint64(raw[48:], e.Attrs&^qcomSlotBits|bits)
+}
+
+func otherSlot(name string) (string, bool) {
+	switch {
+	case strings.HasSuffix(name, "_a"):
+		return strings.TrimSuffix(name, "_a") + "_b", true
+	case strings.HasSuffix(name, "_b"):
+		return strings.TrimSuffix(name, "_b") + "_a", true
+	}
+	return "", false
 }
 
 // LastEntry is the entry that ends at the end of the disk, which the flash

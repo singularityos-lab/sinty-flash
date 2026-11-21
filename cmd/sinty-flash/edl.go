@@ -78,6 +78,14 @@ func cmdEDLPackage(args []string) error {
 	if data.Last != last.Last {
 		return fmt.Errorf("the replaced partitions do not end the disk, %q does", last.Name)
 	}
+	if slot := p.Install.ActiveSlot; slot != nil {
+		if slot.Scheme != "qcom-abl" {
+			return fmt.Errorf("%s: active slot scheme %q is not supported", id, slot.Scheme)
+		}
+		if err := table.ActivateQcomSlot(slot.Partition); err != nil {
+			return err
+		}
+	}
 
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err

@@ -305,3 +305,40 @@ func TestTheBoardPackage(t *testing.T) {
 		t.Fatalf("kept %d of %d", kept, len(before))
 	}
 }
+
+func TestActivateQcomSlotMarksTheSlotBooted(t *testing.T) {
+	main, backup := boardTables(t)
+	putEntry(main[2*Sector:], 6, "boot_b", 601, 700, 1<<60|0x87<<48)
+	copy(backup, main[2*Sector:])
+	tb, err := ParseTable(main, backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tb.ActivateQcomSlot("boot_a"); err != nil {
+		t.Fatal(err)
+	}
+	again, err := ParseTable(tb.Main(), tb.Backup())
+	if err != nil {
+		t.Fatalf("the table no longer parses: %v", err)
+	}
+	a, _ := again.Find("boot_a")
+	if a.Attrs != 0x7f<<48 {
+		t.Fatalf("boot_a attributes %#x, want active, priority 3, 7 retries, successful", a.Attrs)
+	}
+	b, _ := again.Find("boot_b")
+	if b.Attrs != 1<<60 {
+		t.Fatalf("boot_b attributes %#x, want only the shipped bits", b.Attrs)
+	}
+	x, _ := again.Find("xbl_a")
+	if x.Attrs != 1<<60 {
+		t.Fatalf("xbl_a attributes changed to %#x", x.Attrs)
+	}
+}
+
+func TestActivateQcomSlotNeedsThePartition(t *testing.T) {
+	main, backup := boardTables(t)
+	tb, _ := ParseTable(main, backup)
+	if err := tb.ActivateQcomSlot("boot_c"); err == nil {
+		t.Fatal("a missing partition was accepted")
+	}
+}
