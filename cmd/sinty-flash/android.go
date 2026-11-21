@@ -177,7 +177,7 @@ func releaseDataImage(dir string) (path, built string, err error) {
 		return "", "", err
 	}
 	path = filepath.Join(built, releaseData)
-	if err := buildDataImage(dir, path); err != nil {
+	if _, err := buildDataImage(dir, path, ""); err != nil {
 		os.RemoveAll(built)
 		return "", "", err
 	}

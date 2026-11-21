@@ -28,10 +28,13 @@ usage:
   sinty-flash detect                         find connected devices the catalog knows
   sinty-flash stick [-y] <id> <image> <disk> write the installer stick for a device
   sinty-flash flash [-y] <id> <image|release> flash a device in fastboot mode
-  sinty-flash data-image <id> <release> <out>
+  sinty-flash data-image [-trust-host <cert>] <id> <release> <out>
                                              build the data image of a phone
-  sinty-flash edl-package <id> <release> <firmware> <out>
+  sinty-flash edl-package [-trust-host <cert>] <id> <release> <firmware> <out>
                                              build the EDL flash package of a board
+
+-trust-host turns the debug bridge on from the first boot and trusts the sdb
+host whose certificate is given, for devices with no screen to pair on.
   sinty-flash version                        print the version
 
 The catalog is read from SINTY_FLASH_CATALOG, a URL or a local checkout of

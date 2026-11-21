@@ -34,8 +34,9 @@ const (
 // programmer runs. Every other partition, attributes included, stays as the
 // board's firmware package ships it.
 func cmdEDLPackage(args []string) error {
-	if len(args) != 4 {
-		return usageError("edl-package <id> <release> <firmware> <out>")
+	trust, args, err := parseTrustHost("edl-package", args)
+	if err != nil || len(args) != 4 {
+		return usageError("edl-package [-trust-host <cert>] <id> <release> <firmware> <out>")
 	}
 	id, release, firmware, out := args[0], args[1], args[2], args[3]
 	p, err := loadProfile(context.Background(), id)
@@ -91,6 +92,12 @@ func cmdEDLPackage(args []string) error {
 	if err := stageRelease(installer, "--stage", stage, release, work); err != nil {
 		return err
 	}
+	bridge := ""
+	if trust != "" {
+		if bridge, err = seedBridge(filepath.Join(stage, "data"), trust); err != nil {
+			return err
+		}
+	}
 
 	espRaw := filepath.Join(work, "efi.img")
 	if err := makeESP(espRaw, filepath.Join(stage, "esp"), int64(esp.Last-esp.First+1)*edl.Sector); err != nil {
@@ -139,6 +146,7 @@ func cmdEDLPackage(args []string) error {
 	}
 	fmt.Printf("%s %s flash package in %s: %s replaced by %s, every other partition as the firmware ships it\n",
 		p.Vendor, p.Model, out, strings.Join(p.Install.Replace, " and "), dataLabel)
+	printBridge(bridge)
 	return nil
 }
 
